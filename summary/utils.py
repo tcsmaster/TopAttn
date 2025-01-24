@@ -15,6 +15,7 @@
 """
 Frequently used functions for building summaries.
 """
+
 import os
 from glob import glob
 
@@ -22,10 +23,13 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-def median_ensemble(experiment_path: str,
-                    summary_filter: str = '**',
-                    forecast_file: str = 'forecast.csv',
-                    group_by: str = 'id'):
+
+def median_ensemble(
+    experiment_path: str,
+    summary_filter: str = "**",
+    forecast_file: str = "forecast.csv",
+    group_by: str = "id",
+):
     """
     Build a median ensemble from files found in the experiment path.
 
@@ -35,10 +39,22 @@ def median_ensemble(experiment_path: str,
     :param group_by: Grouping key.
     :return: Pandas dataframe with median forecasts.
     """
-    return pd.concat([pd.read_csv(file)
-                      for file in
-                      tqdm(glob(os.path.join(experiment_path, summary_filter, forecast_file)))], sort=False) \
-        .set_index(group_by).groupby(level=group_by, sort=False).median().values
+    return (
+        pd.concat(
+            [
+                pd.read_csv(file)
+                for file in tqdm(
+                    glob(os.path.join(experiment_path, summary_filter, forecast_file))
+                )
+            ],
+            sort=False,
+        )
+        .set_index(group_by)
+        .groupby(level=group_by, sort=False)
+        .median()
+        .values
+    )
+
 
 def group_values(values: np.ndarray, groups: np.ndarray, group_name: str) -> np.ndarray:
     """

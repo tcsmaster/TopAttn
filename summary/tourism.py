@@ -15,6 +15,7 @@
 """
 Tourism summary
 """
+
 from collections import OrderedDict
 from typing import Dict
 
@@ -24,8 +25,8 @@ from common.metrics import mape
 from datasets.tourism import TourismDataset, TourismMeta
 from summary.utils import group_values
 
-class TourismSummary:
 
+class TourismSummary:
     def __init__(self):
         self.test_set = TourismDataset.load(training=False)
 
@@ -49,5 +50,5 @@ class TourismSummary:
             results[sp] = round(float(np.mean(score)), 2)
             offset += len(target)
 
-        results['Average'] = round(cumulative_metrics / cumulative_points, 2)
+        results["Average"] = round(cumulative_metrics / cumulative_points, 2)
         return results

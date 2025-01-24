@@ -15,6 +15,7 @@
 """
 Tourism summary unit test.
 """
+
 import unittest
 
 import numpy as np
@@ -25,17 +26,20 @@ from summary.utils import group_values
 
 
 class TestTourismSummary(unittest.TestCase):
-
     def test_evaluation(self):
         train_dataset = TourismDataset.load(training=True)
 
         naive_forecasts = []
         for seasonal_pattern in TourismMeta.seasonal_patterns:
-            train_values = group_values(train_dataset.values, train_dataset.groups, seasonal_pattern)
+            train_values = group_values(
+                train_dataset.values, train_dataset.groups, seasonal_pattern
+            )
             for ts in train_values:
-                naive_forecast = self.snaive(ts,
-                                             horizon=TourismMeta.horizons_map[seasonal_pattern],
-                                             seasonality=TourismMeta.frequency_map[seasonal_pattern])
+                naive_forecast = self.snaive(
+                    ts,
+                    horizon=TourismMeta.horizons_map[seasonal_pattern],
+                    seasonality=TourismMeta.frequency_map[seasonal_pattern],
+                )
                 naive_forecasts.append(naive_forecast)
         summary = TourismSummary()
         naive_summary = summary.evaluate(np.array(naive_forecasts))
@@ -53,5 +57,5 @@ class TestTourismSummary(unittest.TestCase):
         return forecast
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

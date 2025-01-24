@@ -15,6 +15,7 @@
 """
 Models training logic.
 """
+
 from typing import Iterator
 
 import gin
@@ -28,14 +29,15 @@ from common.torch.ops import default_device, to_tensor
 
 
 @gin.configurable
-def trainer(snapshot_manager: SnapshotManager,
-            model: t.nn.Module,
-            training_set: Iterator,
-            timeseries_frequency: int,
-            loss_name: str,
-            iterations: int,
-            learning_rate: float = 0.001):
-
+def trainer(
+    snapshot_manager: SnapshotManager,
+    model: t.nn.Module,
+    training_set: Iterator,
+    timeseries_frequency: int,
+    loss_name: str,
+    iterations: int,
+    learning_rate: float = 0.001,
+):
     model = model.to(default_device())
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
@@ -68,22 +70,25 @@ def trainer(snapshot_manager: SnapshotManager,
         for param_group in optimizer.param_groups:
             param_group["lr"] = learning_rate * 0.5 ** (i // lr_decay_step)
 
-        snapshot_manager.register(iteration=i,
-                                  training_loss=float(training_loss),
-                                  validation_loss=np.nan, model=model,
-                                  optimizer=optimizer)
+        snapshot_manager.register(
+            iteration=i,
+            training_loss=float(training_loss),
+            validation_loss=np.nan,
+            model=model,
+            optimizer=optimizer,
+        )
     return model
 
 
 def __loss_fn(loss_name: str):
     def loss(x, freq, forecast, target, target_mask):
-        if loss_name == 'MAPE':
+        if loss_name == "MAPE":
             return mape_loss(forecast, target, target_mask)
-        elif loss_name == 'MASE':
+        elif loss_name == "MASE":
             return mase_loss(x, freq, forecast, target, target_mask)
-        elif loss_name == 'SMAPE':
+        elif loss_name == "SMAPE":
             return smape_2_loss(forecast, target, target_mask)
         else:
-            raise Exception(f'Unknown loss function: {loss_name}')
+            raise Exception(f"Unknown loss function: {loss_name}")
 
     return loss

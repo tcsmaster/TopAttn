@@ -15,6 +15,7 @@
 """
 Tourism Dataset
 """
+
 import logging
 import os
 from dataclasses import dataclass
@@ -26,27 +27,19 @@ import patoolib
 from common.http_utils import download, url_file_name
 from common.settings import DATASETS_PATH
 
-DATASET_URL = 'https://robjhyndman.com/data/27-3-Athanasopoulos1.zip'
+DATASET_URL = "https://robjhyndman.com/data/27-3-Athanasopoulos1.zip"
 
-DATASET_PATH = os.path.join(DATASETS_PATH, 'tourism')
+DATASET_PATH = os.path.join(DATASETS_PATH, "tourism")
 DATASET_FILE_PATH = os.path.join(DATASET_PATH, url_file_name(DATASET_URL))
 
 
 @dataclass()
 class TourismMeta:
-    seasonal_patterns = ['Yearly', 'Quarterly', 'Monthly']
+    seasonal_patterns = ["Yearly", "Quarterly", "Monthly"]
     horizons = [4, 8, 24]
     frequency = [1, 4, 12]
-    horizons_map = {
-        'Yearly': 4,
-        'Quarterly': 8,
-        'Monthly': 24
-    }
-    frequency_map = {
-        'Yearly': 1,
-        'Quarterly': 4,
-        'Monthly': 12
-    }
+    horizons_map = {"Yearly": 4, "Quarterly": 8, "Monthly": 24}
+    frequency_map = {"Yearly": 1, "Quarterly": 4, "Monthly": 12}
 
 
 @dataclass()
@@ -57,7 +50,7 @@ class TourismDataset:
     values: np.ndarray
 
     @staticmethod
-    def load(training: bool = True) -> 'TourismDataset':
+    def load(training: bool = True) -> "TourismDataset":
         """
         Load Tourism dataset from cache.
 
@@ -69,16 +62,21 @@ class TourismDataset:
         values = []
 
         for group in TourismMeta.seasonal_patterns:
-
-            train = pd.read_csv(os.path.join(DATASET_PATH, f'{group.lower()}_in.csv'),
-                                header=0, delimiter=",")
-            test = pd.read_csv(os.path.join(DATASET_PATH, f'{group.lower()}_oos.csv'),
-                               header=0, delimiter=",")
+            train = pd.read_csv(
+                os.path.join(DATASET_PATH, f"{group.lower()}_in.csv"),
+                header=0,
+                delimiter=",",
+            )
+            test = pd.read_csv(
+                os.path.join(DATASET_PATH, f"{group.lower()}_oos.csv"),
+                header=0,
+                delimiter=",",
+            )
 
             horizons.extend(list(test.iloc[0].astype(int)))
             groups.extend([group] * len(train.columns))
 
-            if group == 'Yearly':
+            if group == "Yearly":
                 train_meta = train[:2]
                 meta_length = train_meta.iloc[0].astype(int)
                 test = test[2:].reset_index(drop=True).T
@@ -96,12 +94,16 @@ class TourismDataset:
             else:
                 dataset = test
 
-            values.extend([ts[:ts_length] for ts, ts_length in zip(dataset.values, meta_length)])
+            values.extend(
+                [ts[:ts_length] for ts, ts_length in zip(dataset.values, meta_length)]
+            )
 
-        return TourismDataset(ids=np.array(ids),
-                              groups=np.array(groups),
-                              horizons=np.array(horizons),
-                              values=np.array(values))
+        return TourismDataset(
+            ids=np.array(ids),
+            groups=np.array(groups),
+            horizons=np.array(horizons),
+            values=np.array(values),
+        )
 
     @staticmethod
     def download():
@@ -109,13 +111,17 @@ class TourismDataset:
         Download Tourism dataset.
         """
         if os.path.isdir(DATASET_PATH):
-            logging.info(f'skip: {DATASET_PATH} directory already exists.')
+            logging.info(f"skip: {DATASET_PATH} directory already exists.")
             return
         download(DATASET_URL, DATASET_FILE_PATH)
         patoolib.extract_archive(DATASET_FILE_PATH, outdir=DATASET_PATH)
 
     def to_hp_search_training_subset(self):
-        return TourismDataset(ids=self.ids,
-                              groups=self.groups,
-                              horizons=self.horizons,
-                              values=np.array([v[:-self.horizons[i]] for i, v in enumerate(self.values)]))
+        return TourismDataset(
+            ids=self.ids,
+            groups=self.groups,
+            horizons=self.horizons,
+            values=np.array(
+                [v[: -self.horizons[i]] for i, v in enumerate(self.values)]
+            ),
+        )

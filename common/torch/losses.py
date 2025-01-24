@@ -20,6 +20,7 @@ import torch as t
 
 from common.torch.ops import divide_no_nan
 
+
 def mape_loss(forecast: t.Tensor, target: t.Tensor, mask: t.Tensor) -> t.float:
     """
     MAPE loss as defined in: https://en.wikipedia.org/wiki/Mean_absolute_percentage_error
@@ -32,6 +33,7 @@ def mape_loss(forecast: t.Tensor, target: t.Tensor, mask: t.Tensor) -> t.float:
     weights = divide_no_nan(mask, target)
     return t.mean(t.abs((forecast - target) * weights))
 
+
 def smape_1_loss(forecast: t.Tensor, target: t.Tensor, mask: t.Tensor) -> t.float:
     """
     sMAPE loss as defined in "Appendix A" of
@@ -42,7 +44,9 @@ def smape_1_loss(forecast: t.Tensor, target: t.Tensor, mask: t.Tensor) -> t.floa
     :param mask: 0/1 mask. Shape: batch, time
     :return: Loss value
     """
-    return 200 * t.mean(divide_no_nan(t.abs(forecast - target), forecast.data + target.data) * mask)
+    return 200 * t.mean(
+        divide_no_nan(t.abs(forecast - target), forecast.data + target.data) * mask
+    )
 
 
 def smape_2_loss(forecast, target, mask) -> t.float:
@@ -54,12 +58,17 @@ def smape_2_loss(forecast, target, mask) -> t.float:
     :param mask: 0/1 mask. Shape: batch, time
     :return: Loss value
     """
-    return 200 * t.mean(divide_no_nan(t.abs(forecast - target),
-                                      t.abs(forecast.data) + t.abs(target.data)) * mask)
+    return 200 * t.mean(
+        divide_no_nan(
+            t.abs(forecast - target), t.abs(forecast.data) + t.abs(target.data)
+        )
+        * mask
+    )
 
 
-def mase_loss(insample: t.Tensor, freq: int,
-              forecast: t.Tensor, target: t.Tensor, mask: t.Tensor) -> t.float:
+def mase_loss(
+    insample: t.Tensor, freq: int, forecast: t.Tensor, target: t.Tensor, mask: t.Tensor
+) -> t.float:
     """
     MASE loss as defined in "Scaled Errors" https://robjhyndman.com/papers/mase.pdf
 

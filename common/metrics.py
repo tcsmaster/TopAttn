@@ -15,13 +15,16 @@
 """
 Metrics functions using numpy arrays.
 """
+
 import numpy as np
 
 Forecast = np.ndarray
 Target = np.ndarray
 
 
-def mase(forecast: Forecast, insample: np.ndarray, outsample: Target, frequency: int) -> np.ndarray:
+def mase(
+    forecast: Forecast, insample: np.ndarray, outsample: Target, frequency: int
+) -> np.ndarray:
     """
     MASE loss as defined in "Scaled Errors" https://robjhyndman.com/papers/mase.pdf
 
@@ -31,7 +34,9 @@ def mase(forecast: Forecast, insample: np.ndarray, outsample: Target, frequency:
     :param frequency: Frequency value
     :return: Same shape array with error calculated for each time step
     """
-    return np.mean(np.abs(forecast - outsample)) / np.mean(np.abs(insample[:-frequency] - insample[frequency:]))
+    return np.mean(np.abs(forecast - outsample)) / np.mean(
+        np.abs(insample[:-frequency] - insample[frequency:])
+    )
 
 
 def nd(forecast: Forecast, target: Target) -> float:
@@ -53,7 +58,9 @@ def nrmse(forecast: Forecast, target: Target) -> float:
     :param target: Target values. Shape: batch, time
     :return: Error values
     """
-    return np.sqrt(np.mean(np.power((forecast - target), 2))) / (np.mean(np.abs(target)))
+    return np.sqrt(np.mean(np.power((forecast - target), 2))) / (
+        np.mean(np.abs(target))
+    )
 
 
 def mape(forecast: Forecast, target: Target) -> np.ndarray:

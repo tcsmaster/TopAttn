@@ -15,6 +15,7 @@
 """
 Electricity Dataset
 """
+
 import logging
 import os
 from dataclasses import dataclass
@@ -37,22 +38,24 @@ Dataset was also compared with the one built by the TRMF paper's author:
 https://github.com/rofuyu/exp-trmf-nips16/blob/master/python/exp-scripts/datasets/download-data.sh
 """
 
-DATASET_URL = 'https://archive.ics.uci.edu/ml/machine-learning-databases/00321/LD2011_2014.txt.zip'
+DATASET_URL = "https://archive.ics.uci.edu/ml/machine-learning-databases/00321/LD2011_2014.txt.zip"
 
-DATASET_DIR = os.path.join(DATASETS_PATH, 'electricity')
+DATASET_DIR = os.path.join(DATASETS_PATH, "electricity")
 DATASET_FILE_PATH = os.path.join(DATASET_DIR, url_file_name(DATASET_URL))
-RAW_DATA_FILE_PATH = os.path.join(DATASET_DIR, 'LD2011_2014.txt')
+RAW_DATA_FILE_PATH = os.path.join(DATASET_DIR, "LD2011_2014.txt")
 
-CACHE_FILE_PATH = os.path.join(DATASET_DIR, 'electricity.npz')
-DATES_CACHE_FILE_PATH = os.path.join(DATASET_DIR, 'dates.npz')
+CACHE_FILE_PATH = os.path.join(DATASET_DIR, "electricity.npz")
+DATES_CACHE_FILE_PATH = os.path.join(DATASET_DIR, "dates.npz")
+
 
 @dataclass()
 class ElectricityMeta:
     horizon = 24
     clients = 370
     time_steps = 26304
-    seasonal_pattern = 'Hourly'
+    seasonal_pattern = "Hourly"
     frequency = 24
+
 
 @dataclass()
 class ElectricityDataset:
@@ -61,7 +64,7 @@ class ElectricityDataset:
     dates: np.ndarray
 
     @staticmethod
-    def load() -> 'ElectricityDataset':
+    def load() -> "ElectricityDataset":
         """
         Load Electricity dataset from cache.
         """
@@ -69,9 +72,12 @@ class ElectricityDataset:
         return ElectricityDataset(
             ids=np.array(list(range(len(value)))),
             values=np.load(CACHE_FILE_PATH, allow_pickle=True),
-            dates=np.load(DATES_CACHE_FILE_PATH, allow_pickle=True))
+            dates=np.load(DATES_CACHE_FILE_PATH, allow_pickle=True),
+        )
 
-    def split_by_date(self, cut_date: str, include_cut_date: bool = True) -> Tuple['ElectricityDataset', 'ElectricityDataset']:
+    def split_by_date(
+        self, cut_date: str, include_cut_date: bool = True
+    ) -> Tuple["ElectricityDataset", "ElectricityDataset"]:
         """
         Split dataset by date.
 
@@ -80,23 +86,28 @@ class ElectricityDataset:
         :return: Two parts of dataset: the left part contains all points before the cut point
         and the right part contains all datpoints on and after the cut point.
         """
-        date = datetime.strptime(cut_date, '%Y-%m-%d %H')
+        date = datetime.strptime(cut_date, "%Y-%m-%d %H")
         left_indices = []
         right_indices = []
         for i, p in enumerate(self.dates):
-            record_date = datetime.strptime(p, '%Y-%m-%d %H')
+            record_date = datetime.strptime(p, "%Y-%m-%d %H")
             if record_date < date or (include_cut_date and record_date == date):
                 left_indices.append(i)
             else:
                 right_indices.append(i)
-        return ElectricityDataset(ids=self.ids,
-                                  values=self.values[:, left_indices],
-                                  dates=self.dates[left_indices]), \
-               ElectricityDataset(ids=self.ids,
-                                  values=self.values[:, right_indices],
-                                  dates=self.dates[right_indices])
+        return ElectricityDataset(
+            ids=self.ids,
+            values=self.values[:, left_indices],
+            dates=self.dates[left_indices],
+        ), ElectricityDataset(
+            ids=self.ids,
+            values=self.values[:, right_indices],
+            dates=self.dates[right_indices],
+        )
 
-    def split(self, cut_point: int) -> Tuple['ElectricityDataset', 'ElectricityDataset']:
+    def split(
+        self, cut_point: int
+    ) -> Tuple["ElectricityDataset", "ElectricityDataset"]:
         """
         Split dataset by cut point.
 
@@ -104,12 +115,15 @@ class ElectricityDataset:
         :return: Two parts of dataset: left contains all points before the cut point
         and the right part contains all datpoints on and after the cut point.
         """
-        return ElectricityDataset(ids=self.ids,
-                                  values=self.values[:, :cut_point],
-                                  dates=self.dates[:cut_point]), \
-               ElectricityDataset(ids=self.ids,
-                                  values=self.values[:, cut_point:],
-                                  dates=self.dates[cut_point:])
+        return ElectricityDataset(
+            ids=self.ids,
+            values=self.values[:, :cut_point],
+            dates=self.dates[:cut_point],
+        ), ElectricityDataset(
+            ids=self.ids,
+            values=self.values[:, cut_point:],
+            dates=self.dates[cut_point:],
+        )
 
     def time_points(self):
         return self.dates.shape[0]
@@ -120,11 +134,11 @@ class ElectricityDataset:
         Download Electricity dataset.
         """
         if os.path.isdir(DATASET_DIR):
-            logging.info(f'skip: {DATASET_DIR} directory already exists.')
+            logging.info(f"skip: {DATASET_DIR} directory already exists.")
             return
         download(DATASET_URL, DATASET_FILE_PATH)
         patoolib.extract_archive(DATASET_FILE_PATH, outdir=DATASET_DIR)
-        with open(RAW_DATA_FILE_PATH, 'r') as f:
+        with open(RAW_DATA_FILE_PATH, "r") as f:
             raw = f.readlines()
 
         # based on data downloaded by script:
@@ -133,22 +147,38 @@ class ElectricityDataset:
         # The raw data frequency is 15 minutes, thus we ignore header, first record, and 4 * 24 * 365 data points
         header = 1
         ignored_first_values = header + (365 * 24 * 4)
-        parsed_values = list(map(lambda raw_line: raw_line.replace(',', '.').strip().split(';')[1:],
-                                 raw[ignored_first_values:]))
+        parsed_values = list(
+            map(
+                lambda raw_line: raw_line.replace(",", ".").strip().split(";")[1:],
+                raw[ignored_first_values:],
+            )
+        )
         data = np.array(parsed_values).astype(np.float)
 
         # aggregate to hourly
         aggregated = []
         for i in tqdm(range(0, data.shape[0], 4)):
-            aggregated.append(data[i:i + 4, :].sum(axis=0))
+            aggregated.append(data[i : i + 4, :].sum(axis=0))
         aggregated = np.array(aggregated)
 
         dataset = aggregated.T  # use time step as second dimension.
-        logging.info(f'Caching matrix {dataset.shape} to {CACHE_FILE_PATH}')
+        logging.info(f"Caching matrix {dataset.shape} to {CACHE_FILE_PATH}")
         dataset.dump(CACHE_FILE_PATH)
-        logging.info(f'Caching dates to {DATES_CACHE_FILE_PATH}')
-        dates = list(map(lambda raw_line: raw_line.replace(',', '.').strip().split(';')[0], raw[ignored_first_values:]))
+        logging.info(f"Caching dates to {DATES_CACHE_FILE_PATH}")
+        dates = list(
+            map(
+                lambda raw_line: raw_line.replace(",", ".").strip().split(";")[0],
+                raw[ignored_first_values:],
+            )
+        )
         # ignore first hour, for its values are aggregated to the next hour.
-        np.unique(list(
-            map(lambda s: datetime.strptime(s[1:-1], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%d %H'), dates)))[1:].dump(
-            DATES_CACHE_FILE_PATH)
+        np.unique(
+            list(
+                map(
+                    lambda s: datetime.strptime(s[1:-1], "%Y-%m-%d %H:%M:%S").strftime(
+                        "%Y-%m-%d %H"
+                    ),
+                    dates,
+                )
+            )
+        )[1:].dump(DATES_CACHE_FILE_PATH)

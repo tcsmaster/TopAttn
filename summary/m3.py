@@ -15,6 +15,7 @@
 """
 M3 Summary
 """
+
 from collections import OrderedDict
 from typing import Dict
 
@@ -23,6 +24,7 @@ import numpy as np
 from common.metrics import smape_1
 from datasets.m3 import M3Dataset, M3Meta
 from summary.utils import group_values
+
 
 class M3Summary:
     def __init__(self):
@@ -48,5 +50,5 @@ class M3Summary:
             results[sp] = round(float(np.mean(sp_smape)), 2)
             offset += len(target)
 
-        results['Average'] = round(cumulative_metrics / cumulative_points, 2)
+        results["Average"] = round(cumulative_metrics / cumulative_points, 2)
         return results

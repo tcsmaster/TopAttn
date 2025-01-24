@@ -15,6 +15,7 @@
 """
 M4 summary unit test.
 """
+
 import os
 import unittest
 
@@ -25,13 +26,16 @@ from common.http_utils import download, url_file_name
 from common.settings import TESTS_STORAGE_PATH
 from summary.m4 import M4Summary
 
-WINNER_FORECAST_URL = 'https://github.com/M4Competition/M4-methods/raw/master/Point%20Forecasts/submission-118.rar'
-TEST_STORAGE_PATH = os.path.join(TESTS_STORAGE_PATH, 'm4')
-WINNER_FORECAST_PATH = os.path.join(TEST_STORAGE_PATH, 'submission-118.csv')
+WINNER_FORECAST_URL = "https://github.com/M4Competition/M4-methods/raw/master/Point%20Forecasts/submission-118.rar"
+TEST_STORAGE_PATH = os.path.join(TESTS_STORAGE_PATH, "m4")
+WINNER_FORECAST_PATH = os.path.join(TEST_STORAGE_PATH, "submission-118.csv")
+
 
 class TestM4Summary(unittest.TestCase):
     def setUp(self) -> None:
-        winner_archive = os.path.join(TEST_STORAGE_PATH, url_file_name(WINNER_FORECAST_URL))
+        winner_archive = os.path.join(
+            TEST_STORAGE_PATH, url_file_name(WINNER_FORECAST_URL)
+        )
         download(WINNER_FORECAST_URL, winner_archive)
         if not os.path.isfile(WINNER_FORECAST_PATH):
             patoolib.extract_archive(winner_archive, outdir=TEST_STORAGE_PATH)
@@ -50,18 +54,18 @@ class TestM4Summary(unittest.TestCase):
         # https://www.researchgate.net/profile/Spyros_Makridakis/publication/325901666_The_M4_Competition_Results_
         # findings_conclusion_and_way_forward/links/5b2c9aa4aca2720785d66b5e/The-M4-Competition-Results-findings-
         # conclusion-and-way-forward.pdf?origin=publication_detail
-        self.assertEqual(smape_results['Yearly'], 13.176)
-        self.assertEqual(smape_results['Quarterly'], 9.679)
-        self.assertEqual(smape_results['Monthly'], 12.126)
-        self.assertEqual(smape_results['Others'], 4.013)
-        self.assertEqual(smape_results['Average'], 11.374)
+        self.assertEqual(smape_results["Yearly"], 13.176)
+        self.assertEqual(smape_results["Quarterly"], 9.679)
+        self.assertEqual(smape_results["Monthly"], 12.126)
+        self.assertEqual(smape_results["Others"], 4.013)
+        self.assertEqual(smape_results["Average"], 11.374)
 
-        self.assertEqual(owa_results['Yearly'], 0.778)
-        self.assertEqual(owa_results['Quarterly'], 0.847)
-        self.assertEqual(owa_results['Monthly'], 0.836)
-        self.assertEqual(owa_results['Others'], 0.920)
-        self.assertEqual(owa_results['Average'], 0.821)
+        self.assertEqual(owa_results["Yearly"], 0.778)
+        self.assertEqual(owa_results["Quarterly"], 0.847)
+        self.assertEqual(owa_results["Monthly"], 0.836)
+        self.assertEqual(owa_results["Others"], 0.920)
+        self.assertEqual(owa_results["Average"], 0.821)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

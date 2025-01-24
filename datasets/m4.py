@@ -15,6 +15,7 @@
 """
 M4 Dataset
 """
+
 import logging
 import os
 from collections import OrderedDict
@@ -29,24 +30,32 @@ from tqdm import tqdm
 from common.http_utils import download, url_file_name
 from common.settings import DATASETS_PATH
 
-FREQUENCIES = ['Hourly', 'Daily', 'Weekly', 'Monthly', 'Quarterly', 'Yearly']
-URL_TEMPLATE = 'https://github.com/Mcompetitions/M4-methods/raw/master/Dataset/{}/{}-{}.csv'
+FREQUENCIES = ["Hourly", "Daily", "Weekly", "Monthly", "Quarterly", "Yearly"]
+URL_TEMPLATE = (
+    "https://github.com/Mcompetitions/M4-methods/raw/master/Dataset/{}/{}-{}.csv"
+)
 
-TRAINING_DATASET_URLS = [URL_TEMPLATE.format("Train", freq, "train") for freq in FREQUENCIES]
+TRAINING_DATASET_URLS = [
+    URL_TEMPLATE.format("Train", freq, "train") for freq in FREQUENCIES
+]
 TEST_DATASET_URLS = [URL_TEMPLATE.format("Test", freq, "test") for freq in FREQUENCIES]
-INFO_URL = 'https://github.com/Mcompetitions/M4-methods/raw/master/Dataset/M4-info.csv'
-NAIVE2_FORECAST_URL = 'https://github.com/M4Competition/M4-methods/raw/master/Point%20Forecasts/submission-Naive2.rar'
+INFO_URL = "https://github.com/Mcompetitions/M4-methods/raw/master/Dataset/M4-info.csv"
+NAIVE2_FORECAST_URL = "https://github.com/M4Competition/M4-methods/raw/master/Point%20Forecasts/submission-Naive2.rar"
 
-DATASET_PATH = os.path.join(DATASETS_PATH, 'm4')
+DATASET_PATH = os.path.join(DATASETS_PATH, "m4")
 
-TRAINING_DATASET_FILE_PATHS = [os.path.join(DATASET_PATH, url_file_name(url)) for url in TRAINING_DATASET_URLS]
-TEST_DATASET_FILE_PATHS = [os.path.join(DATASET_PATH, url_file_name(url)) for url in TEST_DATASET_URLS]
+TRAINING_DATASET_FILE_PATHS = [
+    os.path.join(DATASET_PATH, url_file_name(url)) for url in TRAINING_DATASET_URLS
+]
+TEST_DATASET_FILE_PATHS = [
+    os.path.join(DATASET_PATH, url_file_name(url)) for url in TEST_DATASET_URLS
+]
 INFO_FILE_PATH = os.path.join(DATASET_PATH, url_file_name(INFO_URL))
-NAIVE2_FORECAST_FILE_PATH = os.path.join(DATASET_PATH, 'submission-Naive2.csv')
+NAIVE2_FORECAST_FILE_PATH = os.path.join(DATASET_PATH, "submission-Naive2.csv")
 
 
-TRAINING_DATASET_CACHE_FILE_PATH = os.path.join(DATASET_PATH, 'training.npz')
-TEST_DATASET_CACHE_FILE_PATH = os.path.join(DATASET_PATH, 'test.npz')
+TRAINING_DATASET_CACHE_FILE_PATH = os.path.join(DATASET_PATH, "training.npz")
+TEST_DATASET_CACHE_FILE_PATH = os.path.join(DATASET_PATH, "test.npz")
 
 
 @dataclass()
@@ -58,20 +67,25 @@ class M4Dataset:
     values: np.ndarray
 
     @staticmethod
-    def load(training: bool = True) -> 'M4Dataset':
+    def load(training: bool = True) -> "M4Dataset":
         """
         Load cached dataset.
 
         :param training: Load training part if training is True, test part otherwise.
         """
         m4_info = pd.read_csv(INFO_FILE_PATH)
-        return M4Dataset(ids=m4_info.M4id.values,
-                         groups=m4_info.SP.values,
-                         frequencies=m4_info.Frequency.values,
-                         horizons=m4_info.Horizon.values,
-                         values=np.load(
-                             TRAINING_DATASET_CACHE_FILE_PATH if training else TEST_DATASET_CACHE_FILE_PATH,
-                             allow_pickle=True))
+        return M4Dataset(
+            ids=m4_info.M4id.values,
+            groups=m4_info.SP.values,
+            frequencies=m4_info.Frequency.values,
+            horizons=m4_info.Horizon.values,
+            values=np.load(
+                TRAINING_DATASET_CACHE_FILE_PATH
+                if training
+                else TEST_DATASET_CACHE_FILE_PATH,
+                allow_pickle=True,
+            ),
+        )
 
     @staticmethod
     def download() -> None:
@@ -79,7 +93,7 @@ class M4Dataset:
         Download M4 dataset if doesn't exist.
         """
         if os.path.isdir(DATASET_PATH):
-            logging.info(f'skip: {DATASET_PATH} directory already exists.')
+            logging.info(f"skip: {DATASET_PATH} directory already exists.")
             return
 
         download(INFO_URL, INFO_FILE_PATH)
@@ -87,7 +101,7 @@ class M4Dataset:
 
         def build_cache(files: str, cache_path: str) -> None:
             timeseries_dict = OrderedDict(list(zip(m4_ids, [[]] * len(m4_ids))))
-            logging.info(f'Caching {files}')
+            logging.info(f"Caching {files}")
             for train_csv in tqdm(glob(os.path.join(DATASET_PATH, files))):
                 dataset = pd.read_csv(train_csv)
                 dataset.set_index(dataset.columns[0], inplace=True)
@@ -98,11 +112,11 @@ class M4Dataset:
 
         for url, path in zip(TRAINING_DATASET_URLS, TRAINING_DATASET_FILE_PATHS):
             download(url, path)
-        build_cache('*-train.csv', TRAINING_DATASET_CACHE_FILE_PATH)
+        build_cache("*-train.csv", TRAINING_DATASET_CACHE_FILE_PATH)
 
         for url, path in zip(TEST_DATASET_URLS, TEST_DATASET_FILE_PATHS):
             download(url, path)
-        build_cache('*-test.csv', TEST_DATASET_CACHE_FILE_PATH)
+        build_cache("*-test.csv", TEST_DATASET_CACHE_FILE_PATH)
 
         naive2_archive = os.path.join(DATASET_PATH, url_file_name(NAIVE2_FORECAST_URL))
         download(NAIVE2_FORECAST_URL, naive2_archive)
@@ -111,25 +125,26 @@ class M4Dataset:
 
 @dataclass()
 class M4Meta:
-    seasonal_patterns = ['Yearly', 'Quarterly', 'Monthly', 'Weekly', 'Daily', 'Hourly']
+    seasonal_patterns = ["Yearly", "Quarterly", "Monthly", "Weekly", "Daily", "Hourly"]
     horizons = [6, 8, 18, 13, 14, 48]
     frequencies = [1, 4, 12, 1, 1, 24]
     horizons_map = {
-        'Yearly': 6,
-        'Quarterly': 8,
-        'Monthly': 18,
-        'Weekly': 13,
-        'Daily': 14,
-        'Hourly': 48
+        "Yearly": 6,
+        "Quarterly": 8,
+        "Monthly": 18,
+        "Weekly": 13,
+        "Daily": 14,
+        "Hourly": 48,
     }
     frequency_map = {
-        'Yearly': 1,
-        'Quarterly': 4,
-        'Monthly': 12,
-        'Weekly': 1,
-        'Daily': 1,
-        'Hourly': 24
+        "Yearly": 1,
+        "Quarterly": 4,
+        "Monthly": 12,
+        "Weekly": 1,
+        "Daily": 1,
+        "Hourly": 24,
     }
+
 
 def load_m4_info() -> pd.DataFrame:
     """

@@ -15,6 +15,7 @@
 """
 Datasets module
 """
+
 import logging
 import ssl
 
@@ -26,26 +27,28 @@ from datasets.m4 import M4Dataset
 from datasets.tourism import TourismDataset
 from datasets.traffic import TrafficDataset
 
+
 def build():
     """
     Download all datasets.
     """
 
-    logging.info('M4 Dataset')
+    logging.info("M4 Dataset")
     M4Dataset.download()
 
-    logging.info('\n\nM3 Dataset')
+    logging.info("\n\nM3 Dataset")
     M3Dataset.download()
 
-    logging.info('\n\nTourism Dataset')
+    logging.info("\n\nTourism Dataset")
     TourismDataset.download()
 
-    logging.info('\n\nElectricity Dataset')
+    logging.info("\n\nElectricity Dataset")
     ElectricityDataset.download()
 
-    logging.info('\n\nTraffic Dataset')
+    logging.info("\n\nTraffic Dataset")
     TrafficDataset.download()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     logging.root.setLevel(logging.INFO)
     Fire()
