@@ -13,16 +13,124 @@
 # implied). Copyright © 2020 Element AI Inc. All rights reserved.
 
 """
-N-BEATS Model.
+N-BEATS + TopAttn Model.
 """
 
 from typing import Tuple
-
-import numpy as np
 import torch as t
+import numpy as np
+import torch.nn as nn
+import torch.nn.functional as F
 
 
-class NBeatsBlock(t.nn.Module):
+def scaled_dot_product(q, k, v, mask=None):
+    d_k = q.size()[-1]
+    attn_logits = t.matmul(q, k.transpose(-2, -1))
+    attn_logits = attn_logits / np.sqrt(d_k)
+    attention = F.softmax(attn_logits, dim=-1)
+    values = t.matmul(attention, v)
+    return values, attention
+
+
+class MultiHeadAttention(nn.Module):
+    """
+    Implementaiton of multi-headed attention.
+    """
+
+    def __init__(self, input_dim: int, embed_dim: int, num_heads: int):
+        """
+        input_dim: length of the time series window
+        embed_dim: hidden diemension of the attention model
+        num_heads: number of attention heads
+        """
+        super().__init__()
+        assert input_dim % num_heads == 0, (
+            "Embedding dimension must be divisible by num_heads"
+        )
+        self.embed_dim = embed_dim
+        self.num_heads = num_heads
+        self.head_dim = embed_dim // num_heads
+
+        # Stack all weight matrices 1...h together for efficiency
+        # Note that in many implementations you see "bias=False" which is optional
+        self.qkv_proj = nn.Linear(self.input_dim, 3 * self.embed_dim)
+        self.o_proj = nn.Linear(self.embed_dim, self.embed_dim)
+
+    def forward(self, x: t.Tensor):
+        batch_size, input_dim, _ = x.size()
+        # Separate Q, K, V from linear output
+        qkv = self.qkv_proj(x)
+        qkv = qkv.reshape(batch_size, self.input_dim, self.num_heads, 3 * self.head_dim)
+        qkv = qkv.permute(0, 2, 1, 3)  # [Batch, Head, InputDim, Dims]
+        q, k, v = qkv.chunk(3, dim=-1)
+
+        # Determine value outputs
+        values, attention = scaled_dot_product(q, k, v)
+        values = values.permute(0, 2, 1, 3)  # [Batch, InputDim, Head, Dims]
+        values = values.reshape(batch_size, self.input_dim, self.embed_dim)
+        o = self.o_proj(values)
+        return o
+
+
+class EncoderBlock(nn.Module):
+    """
+    Implementaiton of an Encoder Transformer block.
+    """
+
+    def __init__(self, input_dim, num_heads, dim_ff, dropout=0.0):
+        """
+        Inputs:
+            input_dim - Dimensionality of the input
+            num_heads - Number of heads to use in the attention block
+            dim_ff - Dimensionality of the hidden layer in the MLP
+            dropout - Dropout probability to use in the dropout layers
+        """
+        super().__init__()
+
+        # Attention layer
+        self.self_attn = MultiHeadAttention(input_dim, input_dim, num_heads)
+
+        # Two-layer MLP
+        self.linear_net = nn.Sequential(
+            nn.Linear(input_dim, dim_ff),
+            nn.Dropout(dropout),
+            nn.ReLU(inplace=True),
+            nn.Linear(dim_ff, input_dim),
+        )
+
+        # Layers to apply in between the main layers
+        self.norm1 = nn.LayerNorm(input_dim)
+        self.norm2 = nn.LayerNorm(input_dim)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x, mask=None):
+        # Attention part
+        attn_out = self.norm1(self.self_attn(x, mask=mask))
+        x = x + self.dropout(attn_out)
+
+        # MLP part
+        linear_out = self.norm2(self.linear_net(x))
+        x = x + self.dropout(linear_out)
+
+        return x
+
+
+class TopAttn(nn.Module):
+    def __init__(self, input_dim, embed_dim, n_heads, forecast_size):
+        super().__init__()
+        self.attn = MultiHeadAttention(input_dim, embed_dim, n_heads)
+        self.final_layer = nn.Linear(
+            in_features=2 * input_dim, out_features=forecast_size
+        )
+
+    def forward(self, x: t.Tensor):
+        attn_output = self.attn(x)
+        nbeats_input = t.concat((attn_output, x), dim=1)
+        output = self.final_layer(nbeats_input)
+        return output
+
+
+class NBeatsBlock(nn.Module):
     """
     N-BEATS block which takes a basis function as an argument.
     """
@@ -31,7 +139,7 @@ class NBeatsBlock(t.nn.Module):
         self,
         input_size,
         theta_size: int,
-        basis_function: t.nn.Module,
+        basis_function: nn.Module,
         layers: int,
         layer_size: int,
     ):
@@ -45,14 +153,14 @@ class NBeatsBlock(t.nn.Module):
         :param layer_size: Layer size.
         """
         super().__init__()
-        self.layers = t.nn.ModuleList(
-            [t.nn.Linear(in_features=input_size, out_features=layer_size)]
+        self.layers = nn.ModuleList(
+            [nn.Linear(in_features=input_size, out_features=layer_size)]
             + [
-                t.nn.Linear(in_features=layer_size, out_features=layer_size)
+                nn.Linear(in_features=layer_size, out_features=layer_size)
                 for _ in range(layers - 1)
             ]
         )
-        self.basis_parameters = t.nn.Linear(
+        self.basis_parameters = nn.Linear(
             in_features=layer_size, out_features=theta_size
         )
         self.basis_function = basis_function
@@ -65,12 +173,12 @@ class NBeatsBlock(t.nn.Module):
         return self.basis_function(basis_parameters)
 
 
-class NBeats(t.nn.Module):
+class NBeats(nn.Module):
     """
     N-Beats Model.
     """
 
-    def __init__(self, blocks: t.nn.ModuleList):
+    def __init__(self, blocks: nn.ModuleList):
         super().__init__()
         self.blocks = blocks
 
@@ -85,7 +193,7 @@ class NBeats(t.nn.Module):
         return forecast
 
 
-class GenericBasis(t.nn.Module):
+class GenericBasis(nn.Module):
     """
     Generic basis function.
     """
@@ -99,7 +207,7 @@ class GenericBasis(t.nn.Module):
         return theta[:, : self.backcast_size], theta[:, -self.forecast_size :]
 
 
-class TrendBasis(t.nn.Module):
+class TrendBasis(nn.Module):
     """
     Polynomial function to model trend.
     """
@@ -111,7 +219,7 @@ class TrendBasis(t.nn.Module):
         self.polynomial_size = (
             degree_of_polynomial + 1
         )  # degree of polynomial with constant term
-        self.backcast_time = t.nn.Parameter(
+        self.backcast_time = nn.Parameter(
             t.tensor(
                 np.concatenate(
                     [
@@ -125,7 +233,7 @@ class TrendBasis(t.nn.Module):
             ),
             requires_grad=False,
         )
-        self.forecast_time = t.nn.Parameter(
+        self.forecast_time = nn.Parameter(
             t.tensor(
                 np.concatenate(
                     [
@@ -150,7 +258,7 @@ class TrendBasis(t.nn.Module):
         return backcast, forecast
 
 
-class SeasonalityBasis(t.nn.Module):
+class SeasonalityBasis(nn.Module):
     """
     Harmonic functions to model seasonality.
     """
@@ -174,19 +282,19 @@ class SeasonalityBasis(t.nn.Module):
             * (np.arange(forecast_size, dtype=np.float32)[:, None] / forecast_size)
             * self.frequency
         )
-        self.backcast_cos_template = t.nn.Parameter(
+        self.backcast_cos_template = nn.Parameter(
             t.tensor(np.transpose(np.cos(backcast_grid)), dtype=t.float32),
             requires_grad=False,
         )
-        self.backcast_sin_template = t.nn.Parameter(
+        self.backcast_sin_template = nn.Parameter(
             t.tensor(np.transpose(np.sin(backcast_grid)), dtype=t.float32),
             requires_grad=False,
         )
-        self.forecast_cos_template = t.nn.Parameter(
+        self.forecast_cos_template = nn.Parameter(
             t.tensor(np.transpose(np.cos(forecast_grid)), dtype=t.float32),
             requires_grad=False,
         )
-        self.forecast_sin_template = t.nn.Parameter(
+        self.forecast_sin_template = nn.Parameter(
             t.tensor(np.transpose(np.sin(forecast_grid)), dtype=t.float32),
             requires_grad=False,
         )

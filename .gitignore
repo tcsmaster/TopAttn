@@ -17,3 +17,7 @@ __pycache__/
 
 # IDE
 .idea/
+
+venv/*
+
+testing.py

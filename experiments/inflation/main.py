@@ -13,7 +13,7 @@
 # implied). Copyright © 2020 Element AI Inc. All rights reserved.
 
 """
-M3 Experiment
+Tourism Experiment
 """
 
 import logging
@@ -30,29 +30,29 @@ from common.experiment import Experiment
 from common.sampler import TimeseriesSampler
 from common.torch.ops import to_tensor
 from common.torch.snapshots import SnapshotManager
-from datasets.m3 import M3Dataset, M3Meta
+from datasets.tourism import InflationDataset, InflationMeta
 from experiments.trainer import trainer
-from experiments.model import generic, interpretable
+from experiments.model import generic
 from summary.utils import group_values
 
 
-class M3Experiment(Experiment):
+class InflationExperiment(Experiment):
     @gin.configurable()
     def instance(
         self,
         repeat: int,
         lookback: int,
         loss: str,
-        history_size: Dict[str, int],
+        history_size: Dict[str, float],
         iterations: Dict[str, int],
         model_type: str,
     ):
-        dataset = M3Dataset.load(training=True)
+        dataset = InflationDataset.load(training=True)
 
         forecasts = []
-        for seasonal_pattern in M3Meta.seasonal_patterns:
-            sp_history_size = history_size[seasonal_pattern]
-            horizon = M3Meta.horizons_map[seasonal_pattern]
+        for seasonal_pattern in InflationMeta.seasonal_patterns:
+            history_size_in_horizons = history_size[seasonal_pattern]
+            horizon = InflationMeta.horizons_map[seasonal_pattern]
             input_size = lookback * horizon
 
             # Training Set
@@ -64,14 +64,15 @@ class M3Experiment(Experiment):
                 timeseries=training_values,
                 insample_size=input_size,
                 outsample_size=horizon,
-                window_sampling_limit=int(sp_history_size * horizon),
+                window_sampling_limit=int(history_size_in_horizons * horizon),
             )
-            if model_type == "interpretable":
-                model = interpretable(input_size=input_size, output_size=horizon)
-            elif model_type == "generic":
-                model = generic(input_size=input_size, output_size=horizon)
-            else:
-                raise Exception(f"Unknown model type {model_type}")
+
+            model = generic(
+                input_size=input_size,
+                embed_dim=embed_dim,
+                n_heads=n_heads,
+                output_size=horizon,
+            )
 
             # Train model
             snapshot_manager = SnapshotManager(
@@ -82,7 +83,7 @@ class M3Experiment(Experiment):
                 snapshot_manager=snapshot_manager,
                 model=model,
                 training_set=iter(training_set),
-                timeseries_frequency=M3Meta.frequency_map[seasonal_pattern],
+                timeseries_frequency=InflationMeta.frequency_map[seasonal_pattern],
                 loss_name=loss,
                 iterations=iterations[seasonal_pattern],
             )
@@ -94,7 +95,8 @@ class M3Experiment(Experiment):
                 forecasts.extend(model(x, x_mask).cpu().detach().numpy())
 
         forecasts_df = pd.DataFrame(
-            forecasts, columns=[f"V{i + 1}" for i in range(np.max(M3Meta.horizons))]
+            forecasts,
+            columns=[f"V{i + 1}" for i in range(np.max(InflationMeta.horizons))],
         )
         forecasts_df.index = dataset.ids
         forecasts_df.index.name = "id"
@@ -103,4 +105,4 @@ class M3Experiment(Experiment):
 
 if __name__ == "__main__":
     logging.root.setLevel(logging.INFO)
-    Fire(M3Experiment)
+    Fire(InflationExperiment)

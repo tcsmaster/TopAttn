@@ -26,6 +26,7 @@ from models.nbeats import (
     NBeatsBlock,
     SeasonalityBasis,
     TrendBasis,
+    TopAttn,
 )
 
 
@@ -99,3 +100,8 @@ def generic(
             ]
         )
     )
+
+
+@gin.configurable()
+def generic_topattn(input_dim, embed_dim, n_heads, forecast_size):
+    return TopAttn(input_dim, embed_dim, n_heads, forecast_size)
