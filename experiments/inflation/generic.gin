@@ -1,4 +1,4 @@
-build.experiment_name='tourism_generic'
+build.experiment_name='inflation_generic'
 
 instance.model_type = 'generic'
 
@@ -14,11 +14,12 @@ instance.iterations = {
     'Monthly': 100
 }
 
-generic.input_dim = 20
-generic.layers = 2
-generic.stacks = 30
 
-TimeseriesSampler.batch_size = 40
+generic.embed_dim = 128
+generic.num_heads = 4
+
+
+TimeseriesSampler.batch_size = 30
 trainer.learning_rate = 0.001
 
 SnapshotManager.logging_frequency = 100

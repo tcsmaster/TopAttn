@@ -32,7 +32,7 @@ from common.torch.ops import to_tensor
 from common.torch.snapshots import SnapshotManager
 from datasets.tourism import InflationDataset, InflationMeta
 from experiments.trainer import trainer
-from experiments.model import generic
+from experiments.model import generic_topattn
 from summary.utils import group_values
 
 
@@ -67,12 +67,7 @@ class InflationExperiment(Experiment):
                 window_sampling_limit=int(history_size_in_horizons * horizon),
             )
 
-            model = generic(
-                input_size=input_size,
-                embed_dim=embed_dim,
-                n_heads=n_heads,
-                output_size=horizon,
-            )
+            model = generic_topattn(input_size=input_size, output_size=horizon)
 
             # Train model
             snapshot_manager = SnapshotManager(
